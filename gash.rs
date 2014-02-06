@@ -16,17 +16,28 @@ use std::io::buffered::BufferedReader;
 use std::io::stdin;
 use extra::getopts;
 
-struct Shell {
+
+
+struct  Shell {
     cmd_prompt: ~str,
+
+    //array of past commands
+    history: ~[~str]
 }
+
+
 
 impl Shell {
     fn new(prompt_str: &str) -> Shell {
         Shell {
             cmd_prompt: prompt_str.to_owned(),
+
+            //past commands initialized to empty
+            history: ~[]
         }
     }
-    
+   
+
     fn run(&mut self) {
         let mut stdin = BufferedReader::new(stdin());
         
@@ -47,9 +58,13 @@ impl Shell {
     }
     
     fn run_cmdline(&mut self, cmd_line: &str) {
+    	self.history.push(cmd_line.to_owned()); 
+
         let mut argv: ~[~str] =
             cmd_line.split(' ').filter_map(|x| if x != "" { Some(x.to_owned()) } else { None }).to_owned_vec();
     
+
+
         if argv.len() > 0 {
             let program: ~str = argv.remove(0);
             self.run_cmd(program, argv);
@@ -58,13 +73,58 @@ impl Shell {
     
     fn run_cmd(&mut self, program: &str, argv: &[~str]) {
         if self.cmd_exists(program) {
-            run::process_status(program, argv);
+
+
+        	//self.history.push(program.to_owned()); 
+            
+
+            //TODO: put this code in cd function and call it here
+            if program == "cd" {
+
+            	let mut pathName = "";
+            	// ^ is this ok ?? - not sure how to get home directory so just 
+            	//doing root if no input for directory
+
+
+
+            	if argv.len() != 0 {
+            	 pathName = argv[0].trim(); 
+            	}
+            	
+
+           
+    			//creat path object and cd to it
+
+                let path = Path::new(pathName);
+
+                if path.exists(){
+            	os::change_dir(&path); 
+            	}
+            	else{
+            		println("invalid path!")
+            	}
+            	
+            }
+
+            //iterate over history array and print contents
+            else if program == "history"{
+            	for x in self.history.iter() {
+    			println!("{}", *x);
+				}
+
+            }
+            else{
+
+            	run::process_status(program, argv);
+            }
         } else {
             println!("{:s}: command not found", program);
         }
     }
     
     fn cmd_exists(&mut self, cmd_path: &str) -> bool {
+    	if cmd_path == "history" {return true; }
+
         let ret = run::process_output("which", [cmd_path.to_owned()]);
         return ret.expect("exit code error.").status.success();
     }
@@ -95,6 +155,8 @@ fn get_cmdline_from_args() -> Option<~str> {
 }
 
 fn main() {
+	 
+
     let opt_cmd_line = get_cmdline_from_args();
     
     match opt_cmd_line {
