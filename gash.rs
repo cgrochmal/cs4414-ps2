@@ -52,7 +52,7 @@ impl Shell {
         let mut stdin = BufferedReader::new(stdin());
         
         loop {
-            print(self.cmd_prompt);
+            print!("{:s}",self.cmd_prompt);
             io::stdio::flush();
             
             let line = stdin.read_line().unwrap();
@@ -84,7 +84,7 @@ impl Shell {
     fn run_cmd(&mut self, program: &str, argv: &[~str]) {
         if self.cmd_exists(program) {
 
-			
+
 			let mut argv = argv.to_owned(); 
         	//self.history.push(program.to_owned()); 
             
@@ -140,6 +140,7 @@ impl Shell {
 			            argv.remove(i);
 			            //in_fd = get_fd(argv.remove(i), "r");
 			            let output = argv.remove(i);
+			            
 			            self.redirect_output(program, argv, output);
 			        }
 			        i += 1;
@@ -191,7 +192,7 @@ impl Shell {
 
     fn redirect_output(&mut self, program: &str, argv: &[~str], file: &str ){
     	
-	
+
 
 
 			let out_fd = self.get_fd(file, "w");
@@ -249,7 +250,7 @@ fn get_cmdline_from_args() -> Option<~str> {
 }
 
 fn main() {
-	 
+
 
     let opt_cmd_line = get_cmdline_from_args();
     
@@ -258,6 +259,3 @@ fn main() {
         None           => Shell::new("gash > ").run()
     }
 }
-
-
-
