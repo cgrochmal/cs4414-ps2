@@ -52,7 +52,12 @@ impl Shell {
         let mut stdin = BufferedReader::new(stdin());
         
         loop {
+
+
             print!("{:s}",self.cmd_prompt);
+
+           
+
             io::stdio::flush();
             
             let line = stdin.read_line().unwrap();
@@ -112,7 +117,7 @@ impl Shell {
             	os::change_dir(&path); 
             	}
             	else{
-            		println("invalid path!")
+            		println!("{:s}","invalid path!")
             	}
             	
             }
