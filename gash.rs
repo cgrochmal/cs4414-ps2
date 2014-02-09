@@ -23,13 +23,14 @@ use std::io::buffered::BufferedWriter;
 use std::io::File;
 use std::io::stdio::StdWriter; 
 use extra::getopts;
+use std::os::pipe
+; 
 
 
 
 
 struct  Shell {
     cmd_prompt: ~str,
-
     //array of past commands
     history: ~[~str]
 }
@@ -45,7 +46,6 @@ impl Shell {
             history: ~[]
         }
     }
-   
   
 
     fn run(&mut self) {
@@ -63,30 +63,39 @@ impl Shell {
             let line = stdin.read_line().unwrap();
             let cmd_line = line.trim().to_owned();
             let program = cmd_line.splitn(' ', 1).nth(0).expect("no program");
+
+            //check for pipes
+
+	        let pipeLine: ~[~str] =
+	        	cmd_line.split
+	        	('|').filter_map(|x| if x != "" { Some(x.to_owned()) } else { None }).to_owned_vec();
+
+	        let pipes = self.handle_pipes(pipeLine); 
             
-            match program {
-                ""      =>  { continue; }
-                "exit"  =>  { return; }
-                _       =>  { self.run_cmdline(cmd_line); }
-            }
+            if pipes == false{
+	            match program {
+	                ""      =>  { continue; }
+	                "exit"  =>  { return; }
+	                _       =>  { self.run_cmdline(cmd_line, 0, 1, 2); }
+	            }
+        	}
         }
     }
     
-    fn run_cmdline(&mut self, cmd_line: &str) {
+    fn run_cmdline(&mut self, cmd_line: &str, in_fd: libc::c_int, out_fd: libc::c_int, err_fd: libc::c_int) {
     	self.history.push(cmd_line.to_owned()); 
 
         let mut argv: ~[~str] =
             cmd_line.split(' ').filter_map(|x| if x != "" { Some(x.to_owned()) } else { None }).to_owned_vec();
-    
 
 
         if argv.len() > 0 {
             let program: ~str = argv.remove(0);
-            self.run_cmd(program, argv);
+            self.run_cmd(program, argv, in_fd, out_fd, err_fd);
         }
     }
     
-    fn run_cmd(&mut self, program: &str, argv: &[~str]) {
+    fn run_cmd(&mut self, program: &str, argv: &[~str], mut in_fd: libc::c_int, mut out_fd: libc::c_int, mut err_fd: libc::c_int) {
         if self.cmd_exists(program) {
 
 
@@ -140,14 +149,20 @@ impl Shell {
 			            argv.remove(i);
 			            //out_fd = get_fd(argv.remove(i), "w");
 			            let output = argv.remove(i);
-			            self.redirect_output(program, argv, output);
+			            //self.redirect_output(program, argv, output);
+			            in_fd = 0;
+			            out_fd = self.get_fd(output, "w");
+			            err_fd = 2; 
 			            //self.redirect(program, argv, input, "w");
 			        } else if (argv[i] == ~"<") {
 			            argv.remove(i);
 			            //in_fd = get_fd(argv.remove(i), "r");
 			            let input = argv.remove(i);
 			      
-			            self.redirect_input(program, argv, input);
+			            //self.redirect_input(program, argv, input);
+			            in_fd =  self.get_fd(input, "r");
+			            out_fd = 1; 
+			            err_fd = 2; 
 			            //self.redirect(program, argv, output, "r");
 			        }
 			        i += 1;
@@ -159,6 +174,8 @@ impl Shell {
             	//else if argv[0] == ~">"{
             	//	self.redirect_output(program, argv);
             	//}
+
+            	self.run_process(program, argv, in_fd, out_fd, err_fd);
 
             	}
             	else{
@@ -201,6 +218,7 @@ impl Shell {
 			let in_fd = self.get_fd(file, "r");
 
 
+			/*
 			let mut process = run::Process::new(program, argv, run::ProcessOptions {
                                  env: None,
                                  dir: None,
@@ -211,6 +229,9 @@ impl Shell {
      
 
 			process.finish(); 
+			*/
+
+			self.run_process(program, argv, in_fd, 1, 2); 
     }
 
     fn redirect_output(&mut self, program: &str, argv: &[~str], file: &str ){
@@ -221,19 +242,93 @@ impl Shell {
 			let out_fd = self.get_fd(file, "w");
 
 
+			/*
 			let mut process = run::Process::new(program, argv, run::ProcessOptions {
                                  env: None,
                                  dir: None,
-                                 in_fd: Some(1),
+                                 in_fd: Some(0),
                                  out_fd: Some(out_fd),
                                  err_fd: Some(2)
                                      }).unwrap();
      
 
 			process.finish(); 
+			*/
+
+			self.run_process(program, argv, 0, out_fd, 2);
 
 
     }
+
+    fn run_process(&mut self, program: &str, argv: &[~str], in_fd: libc::c_int, out_fd: libc::c_int, err_fd: libc::c_int){
+
+    		let mut process = run::Process::new(program, argv, run::ProcessOptions {
+                                 env: None,
+                                 dir: None,
+                                 in_fd: Some(in_fd),
+                                 out_fd: Some(out_fd),
+                                 err_fd: Some(err_fd)
+                                     }).unwrap();
+     
+
+			process.finish(); 
+
+			 if in_fd != 0 {os::close(in_fd);}
+		     if out_fd != 1 {os::close(out_fd);}
+		     if err_fd != 2 {os::close(err_fd);}
+
+    }
+
+    fn handle_pipes(&mut self, progs: ~[~str]) -> bool {
+
+    		 //let progs: ~[~str] =
+        //cmd_line.split_iter('|').filter_map(|x| if x != "" { Some(x.to_owned()) } else { None }).to_owned_vec();
+    
+    let mut pipes: ~[os::Pipe] = ~[];
+    
+    // create pipes
+    if (progs.len() > 1) {
+        for _ in range(0, progs.len()-1) {
+            pipes.push(os::pipe());
+        }
+    }
+        
+    if progs.len() == 1 {
+        //if bg_flag == false { handle_cmd(progs[0], 0, 1, 2); }
+        //else {task::spawn_sched(task::SingleThreaded, ||{handle_cmd(progs[0], 0, 1, 2)});}
+        return false; 
+    } else {
+        for i in range(0, progs.len()) {
+            let prog = progs[i].to_owned();
+            
+            if i == 0 {
+                let pipe_i = pipes[i];
+              //  task::spawn_sched(task::SingleThreaded, ||{handle_cmd(prog, 0, pipe_i.out, 2)});
+             
+            } else if i == progs.len() - 1 {
+                let pipe_i_1 = pipes[i-1];
+            //  if bg_flag == true {
+              //      task::spawn_sched(task::SingleThreaded, ||{handle_cmd(prog, pipe_i_1.input, 1, 2)});
+             //   } else {
+                    self.run_cmdline(prog, pipe_i_1.input, 1, 2);
+           //     }
+                
+
+            } else {
+                let pipe_i = pipes[i];
+                let pipe_i_1 = pipes[i-1];
+               // task::spawn_sched(task::SingleThreaded, ||{handle_cmd(prog, pipe_i_1.input, pipe_i.out, 2)});
+              
+
+            }
+        }
+    
+        return true; 
+
+
+   	 }
+
+	}
 
       fn get_fd(&mut self, fpath: &str, mode: &str) -> libc::c_int {
 
@@ -246,6 +341,7 @@ impl Shell {
 
     
 }
+
 
 
 fn get_cmdline_from_args() -> Option<~str> {
@@ -278,7 +374,7 @@ fn main() {
     let opt_cmd_line = get_cmdline_from_args();
     
     match opt_cmd_line {
-        Some(cmd_line) => Shell::new("").run_cmdline(cmd_line),
+        Some(cmd_line) => Shell::new("").run_cmdline(cmd_line, 0, 1, 2),
         None           => Shell::new("gash > ").run()
     }
 }
