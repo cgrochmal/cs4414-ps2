@@ -136,17 +136,19 @@ impl Shell {
             	let mut i = 0; 
 
 	    		 while (i < argv.len()) {
-			        if (argv[i] == ~"<") {
+			        if (argv[i] == ~">") {
 			            argv.remove(i);
 			            //out_fd = get_fd(argv.remove(i), "w");
-			            let input = argv.remove(i);
-			            self.redirect_input(program, argv, input);
-			        } else if (argv[i] == ~">") {
+			            let output = argv.remove(i);
+			            self.redirect_output(program, argv, output);
+			            //self.redirect(program, argv, input, "w");
+			        } else if (argv[i] == ~"<") {
 			            argv.remove(i);
 			            //in_fd = get_fd(argv.remove(i), "r");
-			            let output = argv.remove(i);
-			            
-			            self.redirect_output(program, argv, output);
+			            let input = argv.remove(i);
+			      
+			            self.redirect_input(program, argv, input);
+			            //self.redirect(program, argv, output, "r");
 			        }
 			        i += 1;
 			    }
@@ -176,6 +178,22 @@ impl Shell {
         let ret = run::process_output("which", [cmd_path.to_owned()]);
         return ret.expect("exit code error.").status.success();
     }
+/*
+    fn redirect(&mut self, program: &str, argv: &[~str], file: &str, kind: &str){
+    	let mut out_fd = 0;
+    	let mut in_fd = 1;
+    	let err_fd = 2;
+
+    	if kind = "r"{
+    		in_fd = self.get_fd(file, "r");
+    	}
+    	else if kind = "w"{
+    		out_fd = self.get_fd(file, "w");
+
+    	}
+
+    }
+    */ 
 
     fn redirect_input(&mut self, program: &str, argv: &[~str], file: &str ){
     	
@@ -187,8 +205,8 @@ impl Shell {
                                  env: None,
                                  dir: None,
                                  in_fd: Some(in_fd),
-                                 out_fd: None,
-                                 err_fd: None
+                                 out_fd: Some(1),
+                                 err_fd: Some(2)
                                      }).unwrap();
      
 
@@ -206,9 +224,9 @@ impl Shell {
 			let mut process = run::Process::new(program, argv, run::ProcessOptions {
                                  env: None,
                                  dir: None,
-                                 in_fd: None,
+                                 in_fd: Some(1),
                                  out_fd: Some(out_fd),
-                                 err_fd: None
+                                 err_fd: Some(2)
                                      }).unwrap();
      
 
