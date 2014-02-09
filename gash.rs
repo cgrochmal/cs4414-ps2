@@ -9,12 +9,21 @@
 // Version 0.4
 //
 
+/*
+possible feaure 6: up arrow gives last command
+*/
+
 extern mod extra;
 
-use std::{io, run, os};
+use std::{io, run, os, path, libc};
 use std::io::buffered::BufferedReader;
 use std::io::stdin;
+use std::io::stdio;
+use std::io::buffered::BufferedWriter;
+use std::io::File;
+use std::io::stdio::StdWriter; 
 use extra::getopts;
+
 
 
 
@@ -37,6 +46,7 @@ impl Shell {
         }
     }
    
+  
 
     fn run(&mut self) {
         let mut stdin = BufferedReader::new(stdin());
@@ -74,7 +84,8 @@ impl Shell {
     fn run_cmd(&mut self, program: &str, argv: &[~str]) {
         if self.cmd_exists(program) {
 
-
+			
+			let mut argv = argv.to_owned(); 
         	//self.history.push(program.to_owned()); 
             
 
@@ -115,11 +126,42 @@ impl Shell {
             }
             else{
 
-            	run::process_status(program, argv);
+            	if argv.len() > 0 {
+
+            	let mut i = 0; 
+
+	    		 while (i < argv.len()) {
+			        if (argv[i] == ~"<") {
+			            argv.remove(i);
+			            //out_fd = get_fd(argv.remove(i), "w");
+			            let input = argv.remove(i);
+			            self.redirect_input(program, argv, input);
+			        } else if (argv[i] == ~">") {
+			            argv.remove(i);
+			            //in_fd = get_fd(argv.remove(i), "r");
+			            let output = argv.remove(i);
+			            self.redirect_output(program, argv, output);
+			        }
+			        i += 1;
+			    }
+
+            	//if argv[0] == ~"<"{
+            	//	self.redirect_input(program, argv);
+            	//}
+            	//else if argv[0] == ~">"{
+            	//	self.redirect_output(program, argv);
+            	//}
+
+            	}
+            	else{
+            		run::process_status(program, argv);
+            	}
+
             }
-        } else {
-            println!("{:s}: command not found", program);
         }
+        else {
+            println!("{:s}: command not found", program);
+        }	
     }
     
     fn cmd_exists(&mut self, cmd_path: &str) -> bool {
@@ -128,7 +170,59 @@ impl Shell {
         let ret = run::process_output("which", [cmd_path.to_owned()]);
         return ret.expect("exit code error.").status.success();
     }
+
+    fn redirect_input(&mut self, program: &str, argv: &[~str], file: &str ){
+    	
+
+			let in_fd = self.get_fd(file, "r");
+
+
+			let mut process = run::Process::new(program, argv, run::ProcessOptions {
+                                 env: None,
+                                 dir: None,
+                                 in_fd: Some(in_fd),
+                                 out_fd: None,
+                                 err_fd: None
+                                     }).unwrap();
+     
+
+			process.finish(); 
+    }
+
+    fn redirect_output(&mut self, program: &str, argv: &[~str], file: &str ){
+    	
+	
+
+
+			let out_fd = self.get_fd(file, "w");
+
+
+			let mut process = run::Process::new(program, argv, run::ProcessOptions {
+                                 env: None,
+                                 dir: None,
+                                 in_fd: None,
+                                 out_fd: Some(out_fd),
+                                 err_fd: None
+                                     }).unwrap();
+     
+
+			process.finish(); 
+
+
+    }
+
+      fn get_fd(&mut self, fpath: &str, mode: &str) -> libc::c_int {
+
+	    unsafe{
+	        let fpathbuf = fpath.to_c_str().unwrap();
+	        let modebuf = mode.to_c_str().unwrap();
+	        return libc::fileno(libc::fopen(fpathbuf, modebuf));
+	    }
+	}
+
+    
 }
+
 
 fn get_cmdline_from_args() -> Option<~str> {
     /* Begin processing program arguments and initiate the parameters. */
@@ -164,3 +258,6 @@ fn main() {
         None           => Shell::new("gash > ").run()
     }
 }
+
+
+
