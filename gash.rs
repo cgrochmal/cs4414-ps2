@@ -73,7 +73,7 @@ impl Shell {
 	        let pipes = self.handle_pipes(pipeLine); 
             
             if pipes == false{
-            	println("no pipes!");
+      
 	            match program {
 	                ""      =>  { continue; }
 	                "exit"  =>  { return; }
