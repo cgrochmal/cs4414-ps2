@@ -16,6 +16,7 @@ possible feaure 6: up arrow gives last command
 extern mod extra;
 
 use std::{io, run, os, path, libc};
+use std::io::signal::{Listener, Interrupt};
 use std::io::buffered::BufferedReader;
 use std::io::stdin;
 use std::io::stdio;
@@ -49,6 +50,8 @@ impl Shell {
 
     fn run(&mut self) {
         let mut stdin = BufferedReader::new(stdin());
+        let mut listener = Listener::new();
+        listener.register(Interrupt); 
         
         loop {
 
@@ -233,12 +236,13 @@ impl Shell {
 
     let mut pipes: ~[os::Pipe] = ~[];
     
+
     if (progs.len() > 1) {
         for _ in range(0, progs.len()-1) {
             pipes.push(os::pipe());
         }
     }
-    else if progs.len() != 1{
+    if progs.len() != 1{
         for i in range(0, progs.len()) {
             let prog = progs[i].to_owned();
             
