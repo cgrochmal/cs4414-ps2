@@ -108,21 +108,19 @@ impl Shell {
             if program == "cd" {
 
             	let mut pathName = "";
-            	// ^ is this ok ?? - not sure how to get home directory so just 
-            	//doing root if no input for directory
 
-
-
-            	if argv.len() != 0 {
-            	 pathName = argv[0].trim(); 
-            	}
-            	
+            	//go to homedir by default
+            	let mut path: Path = std::os::homedir().unwrap(); 
 
            
-    			//creat path object and cd to it
 
-                let path = Path::new(pathName);
+            	//otherwise get path 
+            	if argv.len() != 0 {
+            	 pathName = argv[0].trim(); 
+            	   path = Path::new(pathName);
+            	}
 
+   				//cd
                 if path.exists(){
             	os::change_dir(&path); 
             	}
@@ -130,6 +128,10 @@ impl Shell {
             		println!("{:s}","invalid path!")
             	}
             	
+            }
+            else if program == "^[[A"{
+            	println(self.history[self.history.len() -1]); 
+
             }
 
             //iterate over history array and print contents
@@ -148,33 +150,20 @@ impl Shell {
 	    		 while (i < argv.len()) {
 			        if (argv[i] == ~">") {
 			            argv.remove(i);
-			            //out_fd = get_fd(argv.remove(i), "w");
 			            let output = argv.remove(i);
-			            //self.redirect_output(program, argv, output);
-			            //in_fd = 0;
+
 			            out_fd = self.get_fd(output, "w");
-			            //err_fd = 2; 
-			            //self.redirect(program, argv, input, "w");
+		
 			        } else if (argv[i] == ~"<") {
 			            argv.remove(i);
-			            //in_fd = get_fd(argv.remove(i), "r");
+
 			            let input = argv.remove(i);
-			      
-			            //self.redirect_input(program, argv, input);
+			 
 			            in_fd =  self.get_fd(input, "r");
-			           // out_fd = 1; 
-			           // err_fd = 2; 
-			            //self.redirect(program, argv, output, "r");
+			    
 			        }
 			        i += 1;
 			    }
-
-            	//if argv[0] == ~"<"{
-            	//	self.redirect_input(program, argv);
-            	//}
-            	//else if argv[0] == ~">"{
-            	//	self.redirect_output(program, argv);
-            	//}
 
             	self.run_process(program, argv, in_fd, out_fd, err_fd);
 
@@ -219,45 +208,32 @@ impl Shell {
 
     fn handle_pipes(&mut self, progs: ~[~str]) -> bool {
 
-    		 //let progs: ~[~str] =
-        //cmd_line.split_iter('|').filter_map(|x| if x != "" { Some(x.to_owned()) } else { None }).to_owned_vec();
+   
     let mut isPipes: bool = false; 
 
     let mut pipes: ~[os::Pipe] = ~[];
     
-    // create pipes
     if (progs.len() > 1) {
         for _ in range(0, progs.len()-1) {
             pipes.push(os::pipe());
         }
     }
-        
-     if progs.len() == 1 {
-        //if bg_flag == false { handle_cmd(progs[0], 0, 1, 2); }
-        //else {task::spawn_sched(task::SingleThreaded, ||{handle_cmd(progs[0], 0, 1, 2)});}
-       
-    } else {
+    else if progs.len() != 1{
         for i in range(0, progs.len()) {
             let prog = progs[i].to_owned();
             
             if i == 0 {
                 let pipe_i = pipes[i];
-              //  task::spawn_sched(task::SingleThreaded, ||{handle_cmd(prog, 0, pipe_i.out, 2)});
               	self.run_cmdline(prog, 0, pipe_i.out, 2); 
              
             } else if i == progs.len() - 1 {
                 let pipe_prev = pipes[i-1];
-            //  if bg_flag == true {
-              //      task::spawn_sched(task::SingleThreaded, ||{handle_cmd(prog, pipe_prev.input, 1, 2)});
-             //   } else {
-                    self.run_cmdline(prog, pipe_prev.input, 1, 2);
-           //     }
-                
+                    self.run_cmdline(prog, pipe_prev.input, 1, 2);               
 
             } else {
                 let pipe_i = pipes[i];
                 let pipe_prev = pipes[i-1];
-               // task::spawn_sched(task::SingleThreaded, ||{handle_cmd(prog, pipe_prev.input, pipe_i.out, 2)});
+            
               	self.run_cmdline(prog, pipe_prev.input, pipe_i.out, 2); 
 
             }
