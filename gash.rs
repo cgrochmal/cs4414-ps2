@@ -181,6 +181,7 @@ impl Shell {
 
             	//self.run_process(program, argv, in_fd, out_fd, err_fd);
             	
+            	if argv.len() > 1{
             	if argv[0] == ~">"{
             		let carrot = argv.remove(0);
             		//println!("arg: {:s}", argv[0]); 
@@ -189,7 +190,7 @@ impl Shell {
             		let carrot = argv.remove(0);
             		//println!("arg: {:s}", argv[0]); 
             	}
-            	
+            	}
             	//println!("arg: {:s}", argv[0]); 
             	self.run_process(program, argv, in_fd, out_fd, err_fd);
 
