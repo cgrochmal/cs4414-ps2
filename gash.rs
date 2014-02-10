@@ -243,6 +243,7 @@ impl Shell {
             if i == 0 {
                 let pipe_i = pipes[i];
               //  task::spawn_sched(task::SingleThreaded, ||{handle_cmd(prog, 0, pipe_i.out, 2)});
+              	self.run_cmdline(prog, 0, pipe_i.out, 2); 
              
             } else if i == progs.len() - 1 {
                 let pipe_prev = pipes[i-1];
@@ -257,7 +258,7 @@ impl Shell {
                 let pipe_i = pipes[i];
                 let pipe_prev = pipes[i-1];
                // task::spawn_sched(task::SingleThreaded, ||{handle_cmd(prog, pipe_prev.input, pipe_i.out, 2)});
-              
+              	self.run_cmdline(prog, pipe_prev.input, pipe_i.out, 2); 
 
             }
         }
