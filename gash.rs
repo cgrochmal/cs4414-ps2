@@ -160,6 +160,7 @@ impl Shell {
             	let mut i = 0; 
 
 	    		 while (i < argv.len()) {
+			    
 			        if (argv[i] == ~">") {
 			            argv.remove(i);
 			            let output = argv.remove(i);
@@ -168,7 +169,7 @@ impl Shell {
 		
 			        } else if (argv[i] == ~"<") {
 			            argv.remove(i);
-
+			            println!("i: {:s}", argv[i]); 
 			            let input = argv.remove(i);
 			 
 			            in_fd =  self.get_fd(input, "r");
@@ -176,12 +177,27 @@ impl Shell {
 			        }
 			        i += 1;
 			    }
+			 
 
+            	//self.run_process(program, argv, in_fd, out_fd, err_fd);
+            	
+            	if argv[0] == ~">"{
+            		let carrot = argv.remove(0);
+            		//println!("arg: {:s}", argv[0]); 
+            	}
+            	if argv[0] == ~"<"{
+            		let carrot = argv.remove(0);
+            		//println!("arg: {:s}", argv[0]); 
+            	}
+            	
+            	//println!("arg: {:s}", argv[0]); 
             	self.run_process(program, argv, in_fd, out_fd, err_fd);
+
 
             	}
             	else{
             		run::process_status(program, argv);
+
             	}
 
             }
@@ -211,6 +227,8 @@ impl Shell {
 
 
     fn run_process(&mut self, program: &str, argv: &[~str], in_fd: libc::c_int, out_fd: libc::c_int, err_fd: libc::c_int){
+
+
 
     		let mut process = run::Process::new(program, argv, run::ProcessOptions {
                                  env: None,
