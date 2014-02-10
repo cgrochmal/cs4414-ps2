@@ -169,7 +169,7 @@ impl Shell {
 		
 			        } else if (argv[i] == ~"<") {
 			            argv.remove(i);
-			            println!("i: {:s}", argv[i]); 
+			            //println!("i: {:s}", argv[i]); 
 			            let input = argv.remove(i);
 			 
 			            in_fd =  self.get_fd(input, "r");
@@ -181,7 +181,7 @@ impl Shell {
 
             	//self.run_process(program, argv, in_fd, out_fd, err_fd);
             	
-            	if argv.len() > 1{
+            	if argv.len() != 0{
             	if argv[0] == ~">"{
             		let carrot = argv.remove(0);
             		//println!("arg: {:s}", argv[0]); 
