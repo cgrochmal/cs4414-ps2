@@ -77,7 +77,8 @@ impl Shell {
 	            match program {
 	                ""      =>  { continue; }
 	                "exit"  =>  { return; }
-	                _       =>  { self.run_cmdline(cmd_line, 0, 1, 2); }
+	                //"newFile" => { self.makeFile(argv[1]);}
+	                _      =>  { self.run_cmdline(cmd_line, 0, 1, 2); }
 	            }
         	}
         }
@@ -129,8 +130,16 @@ impl Shell {
             	}
             	
             }
-            else if program == "^[[A"{
-            	println(self.history[self.history.len() -1]); 
+            else if program == "newFile"{
+            	if argv.len() == 0 {
+            		println("please enter a file name")
+            	} 
+            	else{
+            		let fileName = argv[0]; 
+            		let mut f = File::create(&Path::new(fileName.clone()));
+            		println!("successfully created file {:s}", fileName);
+            	}
+
 
             }
 
@@ -173,6 +182,17 @@ impl Shell {
             	}
 
             }
+        }
+        else if program == "newFile"{
+        	if argv.len() == 0 {
+            		println("please enter a file name")
+            	} 
+            	else{
+            		let fileName = argv[0].clone(); 
+            		let mut f = File::create(&Path::new(fileName.clone()));
+            		println!("successfully created file {:s}", fileName);
+            	}
+
         }
         else {
             println!("{:s}: command not found", program);
